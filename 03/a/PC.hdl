@@ -29,7 +29,7 @@ CHIP PC {
 
     // zMuxOut or incOutのどちらの演算結果をregisterに格納するかをチェック
     // ※本来ならincフラグもチェックした方がわかりやすいかもしれないがその場合4wayでの演算になってしまうのでそれはそれで見辛い。。。
-    // registerへ流し込むデータはALUの結果をload(書き込み)すべきかどうかがわかれば、充分と考える。
+    // registerへ流し込むデータはzMuxOutをload(書き込み)すべきかどうかがわかれば、充分と考える。
     // (registerへの書き込みを行うかどうか自体はactualLoadで判定しているため)
     Mux16(a=incOut,b=zMuxOut,sel=zLoad,out=actualIn);
 
