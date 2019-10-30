@@ -16,7 +16,7 @@ CHIP PC {
     OUT out[16];
 
     PARTS:
-    ALU(x=in,y[0..15]=false,zx=reset,nx=false,zy=false,f=true,no=false,out=aluOut);
+    Mux16(a=in,b[0..15]=false,sel=reset,out=zMuxOut);
 
     // 前回のregister情報を元にincrement演算
     Inc16(in=incIn,out=incOut);
@@ -24,14 +24,14 @@ CHIP PC {
     // registerへのloadフラグの計算。reset,load,incのどれか一つでも1となれば必ずregisterへの書き込みになる。
     Or8Way(in[0]=reset,in[1]=inc,in[2]=load,in[3..7]=false,out=actualLoad);
 
-    // ALUによる演算結果を書き込むべきかをチェック
-    Or8Way(in[0]=reset,in[1]=load,in[2..7]=false,out=aluLoad);
+    // zMuxOutの結果を書き込むべきかをチェック
+    Or8Way(in[0]=reset,in[1]=load,in[2..7]=false,out=zLoad);
 
-    // ALU or Incのどちらの演算結果をregisterに格納するかをチェック
-    // ※本来ならincフラグもチェックした方がわかりやすいかもしれないがその場合4wayでの演算になってしまう。
+    // zMuxOut or incOutのどちらの演算結果をregisterに格納するかをチェック
+    // ※本来ならincフラグもチェックした方がわかりやすいかもしれないがその場合4wayでの演算になってしまうのでそれはそれで見辛い。。。
     // registerへ流し込むデータはALUの結果をload(書き込み)すべきかどうかがわかれば、充分と考える。
     // (registerへの書き込みを行うかどうか自体はactualLoadで判定しているため)
-    Mux16(a=incOut,b=aluOut,sel=aluLoad,out=actualIn);
+    Mux16(a=incOut,b=zMuxOut,sel=zLoad,out=actualIn);
 
     Register(in=actualIn,load=actualLoad,out=out,out=incIn);
 
