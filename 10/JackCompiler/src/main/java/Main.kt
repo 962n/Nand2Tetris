@@ -16,7 +16,7 @@ fun main(args: Array<String>) {
     val pathList = when (file.isDirectory) {
         true -> {
             val files = file.listFiles { _, name -> name.endsWith(".jack", true) }
-            writePath = "${file.path}/${file.name}.xml"
+//            writePath = "${file.path}/${file.name}.xml"
             files?.map { it.path } ?: emptyList()
         }
         false -> {
@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
                 throw Exception("file name error! file extension should be '.jack'")
             }
             val writeFileName = file.name.replace(".jack", ".xml")
-            writePath = file.path.replace(file.name, writeFileName)
+//            writePath = file.path.replace(file.name, writeFileName)
             listOf(file.path)
         }
     }

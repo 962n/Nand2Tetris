@@ -5,6 +5,9 @@ import java.nio.file.StandardOpenOption
 
 class TokenXmlWriter(private val writePath:String) {
 
+    companion object {
+        private const val indent  ="    "
+    }
     private val lines = mutableListOf("<tokens>")
     private val specificSymbols = mapOf(
             "<" to "&lt;",
@@ -12,20 +15,20 @@ class TokenXmlWriter(private val writePath:String) {
             "&" to "&amp"
     )
     fun keywordTag(keyword:String) {
-        lines.add("<keyword> $keyword </keyword>")
+        lines.add("$indent<keyword> $keyword </keyword>")
     }
     fun symbolTag(symbol:String) {
         val writeSymbol = specificSymbols[symbol] ?: symbol
-        lines.add("<symbol> $writeSymbol </symbol>")
+        lines.add("$indent<symbol> $writeSymbol </symbol>")
     }
     fun identifierTag(identifier:String) {
-        lines.add("<identifier> $identifier </identifier>")
+        lines.add("$indent<identifier> $identifier </identifier>")
     }
     fun integerConstantTag(integerConstant:Int) {
-        lines.add("<integerConstant> $integerConstant </integerConstant>")
+        lines.add("$indent<integerConstant> $integerConstant </integerConstant>")
     }
     fun stringConstantTag(stringConstant:String) {
-        lines.add("<integerConstant> $stringConstant </integerConstant>")
+        lines.add("$indent<stringConstant> $stringConstant </stringConstant>")
     }
 
     fun commit() {

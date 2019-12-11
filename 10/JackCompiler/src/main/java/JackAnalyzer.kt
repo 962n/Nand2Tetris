@@ -1,14 +1,13 @@
 import java.io.File
-import java.lang.Exception
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-class JackAnalyzer constructor(private val filePath: String) {
+class JackAnalyzer constructor(private val inputFilePath: String) {
 
     fun execute() {
-        val lines = Files.readAllLines(File(filePath).toPath(), StandardCharsets.UTF_8)
+        val lines = Files.readAllLines(File(inputFilePath).toPath(), StandardCharsets.UTF_8)
         val tokenizer = JackTokenizer(lines)
-        val xmlWriter = TokenXmlWriter(filePath)
+        val xmlWriter = TokenXmlWriter(inputFilePath)
         while (tokenizer.hasMoreToken) {
             tokenizer.advance()
             when (tokenizer.tokenType) {
@@ -17,7 +16,6 @@ class JackAnalyzer constructor(private val filePath: String) {
                 TokenType.IDENTIFIER -> xmlWriter.identifierTag(tokenizer.identifier)
                 TokenType.INT_CONST -> xmlWriter.integerConstantTag(tokenizer.intVal)
                 TokenType.STRING_CONST -> xmlWriter.stringConstantTag(tokenizer.stringVal)
-                else -> throw Exception("unknown type!!")
             }
         }
         xmlWriter.commit()
