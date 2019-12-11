@@ -14,8 +14,16 @@ class JackTokenizer constructor(private val lines: List<String>) {
         private const val wildCardWithLine = """(.|\r\n|\n|\r)"""
 
         fun excludeMultiLineComment(sentence: String): String {
-            val regex = Regex("""(/\*$wildCardWithLine*\*/)|(/\*\*$wildCardWithLine*\*/)""")
-            return sentence.replace(regex, "")
+            var newSentence = sentence
+            val regexComment = Regex("""(/\*$wildCardWithLine*\*/)|(/\*\*$wildCardWithLine*\*/)""")
+            val regexNewLine = Regex("""(\r\n|\n|\r)""")
+
+            val results = regexComment.findAll(sentence)
+            results.forEach { result ->
+                val newLine = regexNewLine.findAll(result.value).fold("") { init, element -> init + element.value }
+                newSentence = newSentence.replaceRange(result.range,newLine)
+            }
+            return newSentence
         }
 
         fun excludeSingleLineComment(statement: String): String {

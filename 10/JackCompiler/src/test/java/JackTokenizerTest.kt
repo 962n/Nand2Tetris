@@ -11,8 +11,10 @@ class JackTokenizerTest {
                 "/* /** */ */",
                 "/* \n * hogehoge \n */",
                 "/* \n /** \n */ \n */",
+                "/* \n\r\n\r /** \n */ \n \r */",
                 "abc/**/",
-                "/**/abc"
+                "/**/abc",
+                "hogehoge"
         )
 
         val expects = listOf(
@@ -20,10 +22,12 @@ class JackTokenizerTest {
                 "",
                 "",
                 "",
-                "",
-                "",
+                "\n\n",
+                "\n\n\n",
+                "\n\r\n\r\n\n\r",
                 "abc",
-                "abc"
+                "abc",
+                "hogehoge"
         )
 
         testCases.forEachIndexed { index, s ->
