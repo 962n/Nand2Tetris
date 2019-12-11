@@ -1,0 +1,45 @@
+import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
+
+class TokenXmlWriter(private val writePath:String) {
+
+    private val lines = mutableListOf("<tokens>")
+    private val specificSymbols = mapOf(
+            "<" to "&lt;",
+            ">" to "&gt;",
+            "&" to "&amp"
+    )
+    fun keywordTag(keyword:String) {
+        lines.add("<keyword> $keyword </keyword>")
+    }
+    fun symbolTag(symbol:String) {
+        val writeSymbol = specificSymbols[symbol] ?: symbol
+        lines.add("<symbol> $writeSymbol </symbol>")
+    }
+    fun identifierTag(identifier:String) {
+        lines.add("<identifier> $identifier </identifier>")
+    }
+    fun integerConstantTag(integerConstant:Int) {
+        lines.add("<integerConstant> $integerConstant </integerConstant>")
+    }
+    fun stringConstantTag(stringConstant:String) {
+        lines.add("<integerConstant> $stringConstant </integerConstant>")
+    }
+
+    fun commit() {
+        lines.add("</tokens>")
+        val file = File(writePath)
+        if (file.exists()) {
+            file.delete()
+        }
+        Files.write(
+                File(writePath).toPath(),
+                lines,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.WRITE, StandardOpenOption.CREATE
+        )
+    }
+
+}

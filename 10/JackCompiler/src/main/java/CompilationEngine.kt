@@ -27,11 +27,13 @@ constructor(
     }
 
     fun compileSubroutine() {
+        // ’{’ varDec* statements ’}’
 
 
     }
 
     fun compileParameterList() {
+        // ((type varName) (’,’ type varName)*)?
 
     }
 
