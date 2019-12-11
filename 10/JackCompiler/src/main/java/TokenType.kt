@@ -1,0 +1,4 @@
+
+enum class TokenType {
+    KEYWORD
+}
