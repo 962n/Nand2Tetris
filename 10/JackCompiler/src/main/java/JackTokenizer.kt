@@ -5,34 +5,9 @@ class JackTokenizer constructor(private val lines: List<String>) {
     private val syntaxFailure get() = Exception("line ${currentIndex + 1} is syntax error")
 
     private var allSentence: String = lines.fold("") { s, element ->
-        val elementWithoutComment = excludeSingleLineComment(element)
+        val elementWithoutComment = element.excludeSingleLineComment()
         s + elementWithoutComment + "\n"
-    }
-
-
-    companion object {
-        private const val wildCardWithLine = """(.|\r\n|\n|\r)"""
-
-        fun excludeMultiLineComment(sentence: String): String {
-            var newSentence = sentence
-            val regexComment = Regex("""(/\*$wildCardWithLine*\*/)|(/\*\*$wildCardWithLine*\*/)""")
-            val regexNewLine = Regex("""(\r\n|\n|\r)""")
-
-            val results = regexComment.findAll(sentence)
-            results.forEach { result ->
-                val newLine = regexNewLine.findAll(result.value).fold("") { init, element -> init + element.value }
-                newSentence = newSentence.replaceRange(result.range,newLine)
-            }
-            return newSentence
-        }
-
-        fun excludeSingleLineComment(statement: String): String {
-            return statement
-                    .split("//")
-                    .firstOrNull() ?: ""
-        }
-    }
-
+    }.excludeMultiLineComment()
 
     /**
      * /* 結びまでのコメント */
@@ -88,4 +63,24 @@ class JackTokenizer constructor(private val lines: List<String>) {
     }
 
 
+}
+fun String.excludeMultiLineComment(): String {
+    val patternWildCardWithLine = """(.|\r\n|\n|\r)"""
+    val patternLine = """(\r\n|\n|\r)"""
+    var newSentence = this
+    val regexComment = Regex("""(/\*$patternWildCardWithLine*\*/)|(/\*\*$patternWildCardWithLine*\*/)""")
+    val regexNewLine = Regex(patternLine)
+
+    val results = regexComment.findAll(this)
+    results.forEach { result ->
+        val newLine = regexNewLine.findAll(result.value).fold("") { init, element -> init + element.value }
+        newSentence = newSentence.replaceRange(result.range,newLine)
+    }
+    return newSentence
+}
+
+fun String.excludeSingleLineComment(): String {
+    return this
+            .split("//")
+            .firstOrNull() ?: ""
 }

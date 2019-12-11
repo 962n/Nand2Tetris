@@ -3,6 +3,14 @@ constructor(
         private val tokenizer: JackTokenizer,
         private val writePath: String
 ) {
+    private var nowIndentSize = 0
+
+    private fun incrementIndent(){
+        nowIndentSize +=2
+    }
+    private fun decrementIndent(){
+        nowIndentSize -=2
+    }
 
 
     fun compileClass() {

@@ -31,7 +31,7 @@ class JackTokenizerTest {
         )
 
         testCases.forEachIndexed { index, s ->
-            val actual = JackTokenizer.excludeMultiLineComment(s)
+            val actual = s.excludeMultiLineComment()
             println("actual = '$actual' s='$s'")
             assert(actual == expects[index])
         }
@@ -51,7 +51,7 @@ class JackTokenizerTest {
                 "hogehoge"
         )
         testCases.forEachIndexed { index, s ->
-            val actual = JackTokenizer.excludeSingleLineComment(s)
+            val actual = s.excludeSingleLineComment()
             println("actual = '$actual' s='$s'")
             assert(actual == expects[index])
         }
