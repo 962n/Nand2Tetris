@@ -1,6 +1,10 @@
 class JackTokenizer constructor(private val lines: List<String>) {
 
-    private var allSentence: String = lines.fold("") { s ,element ->
+    private var currentToken: String = ""
+    private var currentIndex = 0
+    private val syntaxFailure get() = Exception("line ${currentIndex + 1} is syntax error")
+
+    private var allSentence: String = lines.fold("") { s, element ->
         val elementWithoutComment = excludeSingleLineComment(element)
         s + elementWithoutComment + "\n"
     }
@@ -44,28 +48,36 @@ class JackTokenizer constructor(private val lines: List<String>) {
 
     val keyword: KeywordType
         get() {
-            return KeywordType.CLASS
+            return KeywordType.of(currentToken) ?: throw syntaxFailure
         }
 
     val symbol: String
         get() {
-            return ""
+            return currentToken
         }
 
     val identifier: String
         get() {
-            return ""
+            return currentToken
         }
 
     val intVal: Int
         get() {
-            return 1
+            if (validateInt(currentToken)) {
+                throw syntaxFailure
+            }
+            return currentToken.toInt()
         }
 
     val stringVal: String
         get() {
-            return ""
+            return currentToken
         }
+
+    private fun validateInt(arg: String): Boolean {
+        val number = arg.toIntOrNull() ?: return false
+        return number in 0..32767
+    }
 
 
 }
