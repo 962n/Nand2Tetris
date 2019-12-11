@@ -30,7 +30,7 @@ class JackTokenizer constructor(private val lines: List<String>) {
 
     val hasMoreToken: Boolean
         get() {
-            return true
+            return TokenType.values().firstOrNull { Regex("""^([ \n])*${it.pattern}""").matches(allSentence) } != null
         }
 
     fun advance() {
