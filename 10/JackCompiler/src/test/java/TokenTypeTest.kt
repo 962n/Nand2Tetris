@@ -49,4 +49,25 @@ class TokenTypeTest {
         }
     }
 
+    @Test
+    fun stringConstPattern() {
+
+        val input = """
+            |"あか //// 😁😁\\さたな||\"         
+            |\"はま\やらわ\"         
+            |\"abcあかさた\" 
+            """.trimMargin()
+        val expect = listOf(
+                """"あか //// 😁😁\\さたな||\"""",
+                """"はま\やらわ\"""",
+                """"abcあかさた\""""
+        )
+
+        val results = Regex(TokenType.STRING_CONST.pattern).findAll(input)
+        results.forEachIndexed { index, matchResult ->
+            assert(matchResult.value == expect[index])
+        }
+
+    }
+
 }

@@ -31,7 +31,8 @@ enum class TokenType {
     },
     STRING_CONST {
         override val pattern: String
-            get() = """\"(uhhhh)*\""""
+            //改行コードの評価は抽出後に行う。また、"の評価については正規表現の書き方上抽出されないのでしない。
+            get() = """"[\x{0}-\x{10FFFF}]*?""""
     };
 
     abstract val pattern: String

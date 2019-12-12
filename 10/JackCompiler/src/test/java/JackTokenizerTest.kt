@@ -74,7 +74,7 @@ class JackTokenizerTest {
             |   var int hoge;
             |   method void f() {
             |       var String s;
-            |       let s = 1;
+            |       let s = "Hello World";
             |       do g(5,7);
             |   }
             |   /*
@@ -82,14 +82,13 @@ class JackTokenizerTest {
             |   */
             |}
         """.trimMargin()
-//        |       let s = "Hello World";
 
         val expected = listOf(
                 KEYWORD to "class", IDENTIFIER to "Foo", SYMBOL to "{",
                 KEYWORD to "var", KEYWORD to "int", IDENTIFIER to "hoge", SYMBOL to ";",
                 KEYWORD to "method", KEYWORD to "void", IDENTIFIER to "f", SYMBOL to "(", SYMBOL to ")", SYMBOL to "{",
                 KEYWORD to "var", IDENTIFIER to "String", IDENTIFIER to "s", SYMBOL to ";",
-                KEYWORD to "let", IDENTIFIER to "s", SYMBOL to "=", INT_CONST to "1", SYMBOL to ";",
+                KEYWORD to "let", IDENTIFIER to "s", SYMBOL to "=", STRING_CONST to "Hello World", SYMBOL to ";",
                 KEYWORD to "do", IDENTIFIER to "g", SYMBOL to "(", INT_CONST to "5", SYMBOL to ",",INT_CONST to "7", SYMBOL to ")", SYMBOL to ";",
                 SYMBOL to "}",
                 SYMBOL to "}"
@@ -98,7 +97,7 @@ class JackTokenizerTest {
 
         val lines = classFile.split("\n")
         val tokenizer = JackTokenizer(lines)
-        println(tokenizer.allSentence)
+//        println(tokenizer.allSentence)
         val actualList = mutableListOf<Pair<TokenType,String>>()
         while (tokenizer.hasMoreToken) {
             tokenizer.advance()
@@ -114,6 +113,8 @@ class JackTokenizerTest {
         }
         expected.forEachIndexed { index ,pair ->
             val actual = actualList[index]
+//            println("expect.first = ${pair.first} | actual.first = ${actual.first}")
+//            println("expect.second = ${pair.second} | actual.second = ${actual.second}")
             assert(pair.first == actual.first)
             assert(pair.second == actual.second)
         }

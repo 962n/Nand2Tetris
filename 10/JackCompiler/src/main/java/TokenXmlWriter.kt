@@ -6,7 +6,7 @@ import java.nio.file.StandardOpenOption
 class TokenXmlWriter(private val writePath: String) {
 
     companion object {
-        private const val indent = "    "
+        private const val indent = "  "
     }
 
     private val lines = mutableListOf("<tokens>")

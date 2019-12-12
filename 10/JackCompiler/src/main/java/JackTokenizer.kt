@@ -36,7 +36,7 @@ class JackTokenizer constructor(lines: List<String>) {
         if (result == null || result.value.isEmpty()) {
             throw syntaxFailure
         }
-        currentToken = result.value.replace(Regex("""\s"""),"")
+        currentToken = result.value.replace(Regex("""^\s*"""),"")
 
         val patternNewLine = """(\r\n|\n|\r)"""
         currentIndex = Regex(patternNewLine)
@@ -50,7 +50,7 @@ class JackTokenizer constructor(lines: List<String>) {
 
     val tokenType: TokenType
         get() {
-            return TokenType.values().first { Regex(it.pattern).containsMatchIn(currentToken) }
+            return TokenType.values().first { Regex(it.pattern).matches(currentToken) }
         }
 
     val keyword: KeywordType
@@ -78,23 +78,28 @@ class JackTokenizer constructor(lines: List<String>) {
 
     val stringVal: String
         get() {
-            return currentToken
+            if (!validateString(currentToken)) {
+                throw syntaxFailure
+            }
+            return currentToken.replace(""""""","")
         }
 
     private fun validateInt(arg: String): Boolean {
         val number = arg.toIntOrNull() ?: return false
         return number in 0..32767
     }
+    private fun validateString(arg:String) : Boolean {
+        return !Regex("""\n""").containsMatchIn(arg)
+    }
 
 
 }
 
 fun String.excludeMultiLineComment(): String {
-    val patternWildCardWithLine = """(.|\r\n|\n|\r)"""
+    val wildCard = """(.|\r\n|\n|\r)"""
     val patternLine = """(\r\n|\n|\r)"""
     var newSentence = this
-//    val regexComment = Regex("""(/\*\*$patternWildCardWithLine*\*/)|(/\*$patternWildCardWithLine*\*/)""")
-    val regexComment = Regex("""/\*\*$patternWildCardWithLine*?\*/|/\*$patternWildCardWithLine*?\*/""")
+    val regexComment = Regex("""/\*\*$wildCard*?\*/|/\*$wildCard*?\*/""")
     val regexNewLine = Regex(patternLine)
 
     val results = regexComment.findAll(this)
@@ -103,12 +108,6 @@ fun String.excludeMultiLineComment(): String {
         newSentence = newSentence.replace(result.value, newLine)
     }
     return newSentence
-}
-fun List<String>.excludeMultiLineComment():List<String> {
-    val list = mutableListOf(this)
-
-
-    return listOf()
 }
 
 fun String.excludeSingleLineComment(): String {
