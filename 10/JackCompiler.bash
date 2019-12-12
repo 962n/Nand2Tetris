@@ -6,6 +6,6 @@ if [ $# -ne 1 ]; then
 fi
 
 cd ./JackCompiler/build/classes/kotlin/main/
-kotlin JackCompilerKt $1
+kotlin MainKt $1
 
 exit 0

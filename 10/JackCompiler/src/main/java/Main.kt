@@ -12,19 +12,15 @@ fun main(args: Array<String>) {
     }
 
     // ファイルかディレクトリかの判定。
-    val writePath:String
     val pathList = when (file.isDirectory) {
         true -> {
             val files = file.listFiles { _, name -> name.endsWith(".jack", true) }
-//            writePath = "${file.path}/${file.name}.xml"
             files?.map { it.path } ?: emptyList()
         }
         false -> {
             if (!file.path.endsWith(".jack", true)) {
                 throw Exception("file name error! file extension should be '.jack'")
             }
-            val writeFileName = file.name.replace(".jack", ".xml")
-//            writePath = file.path.replace(file.name, writeFileName)
             listOf(file.path)
         }
     }

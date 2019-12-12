@@ -10,12 +10,6 @@ class JackTokenizer constructor(lines: List<String>) {
         s + elementWithoutComment + "\n"
     }.excludeMultiLineComment()
 
-    /**
-     * /* 結びまでのコメント */
-     * /** API コメント */
-     * // 行の終わりまでコメント
-     */
-
     val hasMoreToken: Boolean
         get() {
             return TokenType

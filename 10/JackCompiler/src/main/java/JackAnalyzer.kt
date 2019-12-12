@@ -7,7 +7,8 @@ class JackAnalyzer constructor(private val inputFilePath: String) {
     fun execute() {
         val lines = Files.readAllLines(File(inputFilePath).toPath(), StandardCharsets.UTF_8)
         val tokenizer = JackTokenizer(lines)
-        val xmlWriter = TokenXmlWriter(inputFilePath)
+        val writePath = inputFilePath.removeSuffix(".jack")+"Token.xml"
+        val xmlWriter = TokenXmlWriter(writePath)
         while (tokenizer.hasMoreToken) {
             tokenizer.advance()
             when (tokenizer.tokenType) {
