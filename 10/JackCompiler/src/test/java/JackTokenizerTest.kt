@@ -1,5 +1,11 @@
 import org.junit.Test
 
+import TokenType.KEYWORD
+import TokenType.SYMBOL
+import TokenType.INT_CONST
+import TokenType.IDENTIFIER
+import TokenType.STRING_CONST
+
 class JackTokenizerTest {
 
     @Test
@@ -9,7 +15,7 @@ class JackTokenizerTest {
                 "/* hogehoge */",
                 "/* * hogehoge */",
                 "/* /** */ */",
-                "/* \n * hogehoge \n */",
+                "/* \n hogehoge \n */",
                 "/* \n /** \n */ \n */",
                 "/* \n\r\n\r /** \n */ \n \r */",
                 "abc/**/",
@@ -55,8 +61,62 @@ class JackTokenizerTest {
             println("actual = '$actual' s='$s'")
             assert(actual == expects[index])
         }
+    }
+
+    @Test
+    fun tokenizerTest() {
+        val classFile = """
+            |//  class file
+            |class Foo {
+            |   /**
+            |    * comment
+            |    */
+            |   var int hoge;
+            |   method void f() {
+            |       var String s;
+            |       let s = 1;
+            |       do g(5,7);
+            |   }
+            |   /*
+            |      comment
+            |   */
+            |}
+        """.trimMargin()
+//        |       let s = "Hello World";
+
+        val expected = listOf(
+                KEYWORD to "class", IDENTIFIER to "Foo", SYMBOL to "{",
+                KEYWORD to "var", KEYWORD to "int", IDENTIFIER to "hoge", SYMBOL to ";",
+                KEYWORD to "method", KEYWORD to "void", IDENTIFIER to "f", SYMBOL to "(", SYMBOL to ")", SYMBOL to "{",
+                KEYWORD to "var", IDENTIFIER to "String", IDENTIFIER to "s", SYMBOL to ";",
+                KEYWORD to "let", IDENTIFIER to "s", SYMBOL to "=", INT_CONST to "1", SYMBOL to ";",
+                KEYWORD to "do", IDENTIFIER to "g", SYMBOL to "(", INT_CONST to "5", SYMBOL to ",",INT_CONST to "7", SYMBOL to ")", SYMBOL to ";",
+                SYMBOL to "}",
+                SYMBOL to "}"
+        )
 
 
+        val lines = classFile.split("\n")
+        val tokenizer = JackTokenizer(lines)
+        println(tokenizer.allSentence)
+        val actualList = mutableListOf<Pair<TokenType,String>>()
+        while (tokenizer.hasMoreToken) {
+            tokenizer.advance()
+            val tokenType = tokenizer.tokenType
+            val string = when (tokenType) {
+                KEYWORD -> tokenizer.keyword.value
+                SYMBOL -> tokenizer.symbol
+                STRING_CONST -> tokenizer.stringVal
+                INT_CONST -> tokenizer.intVal.toString()
+                IDENTIFIER -> tokenizer.identifier
+            }
+            actualList.add(tokenType to string)
+        }
+        expected.forEachIndexed { index ,pair ->
+            val actual = actualList[index]
+            assert(pair.first == actual.first)
+            assert(pair.second == actual.second)
+        }
     }
 
 

@@ -3,9 +3,11 @@ enum class TokenType {
         override val pattern: String
             get() {
                 val list = KeywordType.values().map { it.value }
-                return list.fold("") { init, element ->
-                    return "$init$element|"
-                }.let {
+                var fold = ""
+                list.forEach {
+                    fold = "$fold$it|"
+                }
+                return fold.let {
                     val removeSuffix = it.removeSuffix("|")
                     """($removeSuffix)"""
                 }
@@ -14,19 +16,7 @@ enum class TokenType {
     SYMBOL {
         override val pattern: String
             get() {
-                val list = listOf(
-                        "{", "}", "(", ")", "[", "]",
-                        ".", ",", ";",
-                        "+", "-", "*", "/",
-                        "&", "|",
-                        "<", ">", "=", "~"
-                )
-                return list.fold("") { init, element ->
-                    return "$init$element|"
-                }.let {
-                    val removeSuffix = it.removeSuffix("|")
-                    """($removeSuffix)"""
-                }
+                return """[{}()\[\].,;+*-/&|<>=~]"""
             }
     },
     IDENTIFIER {
@@ -35,11 +25,13 @@ enum class TokenType {
     },
     INT_CONST {
         override val pattern: String
-            get() = """([0-9]|[1-9]+[0-9])"""
+            get() {
+                return """([1-9]+[0-9]|[0-9])"""
+            }
     },
     STRING_CONST {
         override val pattern: String
-            get() = """"""
+            get() = """\"(uhhhh)*\""""
     };
 
     abstract val pattern: String

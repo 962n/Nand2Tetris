@@ -1,10 +1,11 @@
-class JackTokenizer constructor(private val lines: List<String>) {
 
-    private var currentToken: String = ""
+class JackTokenizer constructor(lines: List<String>) {
+
+    var currentToken: String = ""
     private var currentIndex = 0
     private val syntaxFailure get() = Exception("line ${currentIndex + 1} is syntax error")
 
-    private var allSentence: String = lines.fold("") { s, element ->
+    var allSentence: String = lines.fold("") { s, element ->
         val elementWithoutComment = element.excludeSingleLineComment()
         s + elementWithoutComment + "\n"
     }.excludeMultiLineComment()
@@ -17,16 +18,39 @@ class JackTokenizer constructor(private val lines: List<String>) {
 
     val hasMoreToken: Boolean
         get() {
-            return TokenType.values().firstOrNull { Regex("""^([ \n])*${it.pattern}""").matches(allSentence) } != null
+            return TokenType
+                    .values()
+                    .firstOrNull {
+                        Regex("""^\s*${it.pattern}""").containsMatchIn(allSentence)
+                    } != null
         }
 
     fun advance() {
+        var result: MatchResult? = null
+        for (tokenType in TokenType.values()) {
+            result = Regex( """^\s*${tokenType.pattern}""").find(allSentence)
+            if (result != null) {
+                break
+            }
+        }
+        if (result == null || result.value.isEmpty()) {
+            throw syntaxFailure
+        }
+        currentToken = result.value.replace(Regex("""\s"""),"")
 
+        val patternNewLine = """(\r\n|\n|\r)"""
+        currentIndex = Regex(patternNewLine)
+                .findAll(allSentence.subSequence(0, result.range.last))
+                .count()
+        val onlyNewLine = Regex(patternNewLine).findAll(result.value).fold("") { init , element ->
+            init+element.value
+        }
+        allSentence = allSentence.replaceRange(result.range, onlyNewLine)
     }
 
     val tokenType: TokenType
         get() {
-            return TokenType.KEYWORD
+            return TokenType.values().first { Regex(it.pattern).containsMatchIn(currentToken) }
         }
 
     val keyword: KeywordType
@@ -46,7 +70,7 @@ class JackTokenizer constructor(private val lines: List<String>) {
 
     val intVal: Int
         get() {
-            if (validateInt(currentToken)) {
+            if (!validateInt(currentToken)) {
                 throw syntaxFailure
             }
             return currentToken.toInt()
@@ -64,19 +88,27 @@ class JackTokenizer constructor(private val lines: List<String>) {
 
 
 }
+
 fun String.excludeMultiLineComment(): String {
     val patternWildCardWithLine = """(.|\r\n|\n|\r)"""
     val patternLine = """(\r\n|\n|\r)"""
     var newSentence = this
-    val regexComment = Regex("""(/\*$patternWildCardWithLine*\*/)|(/\*\*$patternWildCardWithLine*\*/)""")
+//    val regexComment = Regex("""(/\*\*$patternWildCardWithLine*\*/)|(/\*$patternWildCardWithLine*\*/)""")
+    val regexComment = Regex("""/\*\*$patternWildCardWithLine*?\*/|/\*$patternWildCardWithLine*?\*/""")
     val regexNewLine = Regex(patternLine)
 
     val results = regexComment.findAll(this)
     results.forEach { result ->
         val newLine = regexNewLine.findAll(result.value).fold("") { init, element -> init + element.value }
-        newSentence = newSentence.replaceRange(result.range,newLine)
+        newSentence = newSentence.replace(result.value, newLine)
     }
     return newSentence
+}
+fun List<String>.excludeMultiLineComment():List<String> {
+    val list = mutableListOf(this)
+
+
+    return listOf()
 }
 
 fun String.excludeSingleLineComment(): String {
