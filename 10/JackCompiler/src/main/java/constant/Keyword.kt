@@ -1,4 +1,6 @@
-enum class KeywordType constructor(val value: String) {
+package constant
+
+enum class Keyword constructor(val value: String) {
     CLASS("class"),
     CONSTRUCTOR("constructor"),
     FUNCTION("function"),
@@ -22,7 +24,7 @@ enum class KeywordType constructor(val value: String) {
     RETURN("return");
 
     companion object {
-        fun of(value: String): KeywordType? {
+        fun of(value: String): Keyword? {
             return values().firstOrNull { value == it.value }
         }
     }

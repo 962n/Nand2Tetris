@@ -1,8 +1,10 @@
-enum class TokenType {
+package constant
+
+enum class Token {
     KEYWORD {
         override val pattern: String
             get() {
-                val list = KeywordType.values().map { it.value }
+                val list = Keyword.values().map { it.value }
                 var fold = ""
                 list.forEach {
                     fold = "$fold$it|"

@@ -13,7 +13,7 @@ class TokenXmlWriter(private val writePath: String) {
     private val specificSymbols = mapOf(
             "<" to "&lt;",
             ">" to "&gt;",
-            "&" to "&amp"
+            "&" to "&amp;"
     )
 
     fun keywordTag(keyword: String) {

@@ -1,10 +1,11 @@
+import constant.Token
 import org.junit.Test
 
-import TokenType.KEYWORD
-import TokenType.SYMBOL
-import TokenType.INT_CONST
-import TokenType.IDENTIFIER
-import TokenType.STRING_CONST
+import constant.Token.KEYWORD
+import constant.Token.SYMBOL
+import constant.Token.INT_CONST
+import constant.Token.IDENTIFIER
+import constant.Token.STRING_CONST
 
 class JackTokenizerTest {
 
@@ -38,7 +39,7 @@ class JackTokenizerTest {
 
         testCases.forEachIndexed { index, s ->
             val actual = s.excludeMultiLineComment()
-            println("actual = '$actual' s='$s'")
+            println("actual = '$actual' s='$s' expect='${expects[index]}'")
             assert(actual == expects[index])
         }
     }
@@ -98,7 +99,7 @@ class JackTokenizerTest {
         val lines = classFile.split("\n")
         val tokenizer = JackTokenizer(lines)
 //        println(tokenizer.allSentence)
-        val actualList = mutableListOf<Pair<TokenType,String>>()
+        val actualList = mutableListOf<Pair<Token,String>>()
         while (tokenizer.hasMoreToken) {
             tokenizer.advance()
             val tokenType = tokenizer.tokenType
