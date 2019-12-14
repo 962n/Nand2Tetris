@@ -66,8 +66,6 @@ class Writer4TestImpl() : Writer {
     }
 
     override fun commit() {
-        _lines.forEach { s ->
-            println(s)
-        }
+        // do nothing
     }
 }
