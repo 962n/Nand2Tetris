@@ -215,10 +215,9 @@ fun <T> List<T>.getSafe(index: Int): T? {
 
 fun String.excludeMultiLineComment(): String {
 
-    val wildCard = """(.|\r\n|\n|\r)"""
     val patternLine = """(\r\n|\n|\r)"""
     var newSentence = this
-    val regexComment = Regex("""(/\*$wildCard*?\*/)""")
+    val regexComment = Regex("""(/\*[\s\S]*?\*/)""")
     val regexCommentPrefix = Regex("""/\*""")
 
     val regexNewLine = Regex(patternLine)
