@@ -11,6 +11,10 @@ class VMWriter(private val writePath: String) {
 
     val lines4Testing: List<String> get() = lines
 
+    private fun addLine(line: String) {
+        lines.add(line)
+    }
+
     fun writePush(segment: Segment, index: Int) {
         addLine("push ${segment.value} $index")
     }
@@ -45,10 +49,6 @@ class VMWriter(private val writePath: String) {
 
     fun writeReturn() {
         addLine("return")
-    }
-
-    private fun addLine(line: String) {
-        lines.add(line)
     }
 
     fun close() {
