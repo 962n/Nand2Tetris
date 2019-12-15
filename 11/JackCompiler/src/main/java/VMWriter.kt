@@ -5,7 +5,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
-class VMWriter(private val writePath: String) {
+class VMWriter(
+        private val writePath: String
+) {
 
     private val lines = mutableListOf<String>()
 

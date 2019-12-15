@@ -1,28 +1,59 @@
 import constant.Kind
+import java.lang.Exception
 
 class SymbolTable {
 
-    fun startSubroutine() {
+    private val classMap = mutableMapOf<String, SymbolInfo>()
+    private val subroutineMap = mutableMapOf<String, SymbolInfo>()
 
+    private data class SymbolInfo(val type: String, val kind: Kind, val index: Int)
+
+    private fun getTargetMap(kind: Kind): MutableMap<String, SymbolInfo> {
+        return when (kind) {
+            Kind.NONE -> throw Exception("Kind.NONE can't have SymbolTable")
+            Kind.STATIC, Kind.FIELD -> {
+                classMap
+            }
+            Kind.ARG, Kind.VAR -> {
+                subroutineMap
+            }
+        }
+    }
+
+    private fun findSymbolInfo(name: String): SymbolInfo? {
+        return subroutineMap[name] ?: classMap[name]
+    }
+
+    fun startSubroutine() {
+        subroutineMap.clear()
     }
 
     fun define(name: String, type: String, kind: Kind) {
-
+        val targetMap = getTargetMap(kind)
+        if (targetMap.containsKey(name)) {
+            throw Exception("$name is already exist in SymbolTable")
+        }
+        val index = targetMap.filterValues { symbol -> kind == symbol.kind }.count()
+        targetMap[name] = SymbolInfo(type, kind, index)
     }
 
     fun varCount(kind: Kind): Int {
-        return 0
+        val targetMap = getTargetMap(kind)
+        return targetMap.filterValues { symbol -> kind == symbol.kind }.count()
     }
 
     fun kindOf(name: String): Kind {
-        return Kind.NONE
+        val target = findSymbolInfo(name)
+        return target?.kind ?: Kind.NONE
     }
 
     fun typeOf(name: String): String {
-        return ""
+        val target = findSymbolInfo(name)
+        return target?.type ?: throw Exception("$name isn't in SymbolTable ")
     }
 
     fun indexOf(name: String): Int {
-        return 0
+        val target = findSymbolInfo(name)
+        return target?.index ?: throw Exception("$name isn't in SymbolTable ")
     }
 }
