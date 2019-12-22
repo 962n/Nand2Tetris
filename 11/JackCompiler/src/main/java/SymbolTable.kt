@@ -10,7 +10,7 @@ class SymbolTable {
 
     private fun getTargetMap(kind: Kind): MutableMap<String, SymbolInfo> {
         return when (kind) {
-            Kind.NONE -> throw Exception("Kind.NONE can't have SymbolTable")
+            Kind.NONE -> throw Exception("Kind.NONE does not have SymbolTable")
             Kind.STATIC, Kind.FIELD -> {
                 classMap
             }

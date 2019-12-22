@@ -39,7 +39,7 @@ class JackTokenizerTest {
 
 
         testCases.forEachIndexed { index, s ->
-            val actual = s.excludeMultiLineComment()
+            val actual = s.excludeComment()
             println("actual = '$actual' s='$s' expect='${expects[index]}'")
             assert(actual == expects[index])
         }
@@ -59,7 +59,7 @@ class JackTokenizerTest {
                 "hogehoge"
         )
         testCases.forEachIndexed { index, s ->
-            val actual = s.excludeSingleLineComment()
+            val actual = s.excludeComment()
             println("actual = '$actual' s='$s'")
             assert(actual == expects[index])
         }
@@ -97,9 +97,7 @@ class JackTokenizerTest {
         )
 
 
-        val lines = classFile.split("\n")
-        val tokenizer = JackTokenizer("",lines)
-//        println(tokenizer.allSentence)
+        val tokenizer = JackTokenizer("",classFile)
         val actualList = mutableListOf<Pair<Token,String>>()
         while (tokenizer.hasMoreToken) {
             tokenizer.advance()

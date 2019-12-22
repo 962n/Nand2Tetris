@@ -1,7 +1,7 @@
 import constant.Keyword
 import constant.Token
 
-class JackTokenizer constructor(private val fileName:String,lines: List<String>) {
+class JackTokenizer constructor(private val fileName:String,linesString: String) {
 
     private var currentIndex = -1
     val currentNumberOfLines: Int
@@ -13,14 +13,11 @@ class JackTokenizer constructor(private val fileName:String,lines: List<String>)
 
     private data class TokenInfo(val tokenType: Token, val token: String, val numberOfLines: Int)
 
-    private val tokenList = generateTokenList(lines)
+    private val tokenList = generateTokenList(linesString)
 
     companion object {
-        private fun generateTokenList(lines: List<String>): List<TokenInfo> {
-            val jackText = lines.fold("") { s, element ->
-                val elementWithoutComment = element.excludeSingleLineComment()
-                s + elementWithoutComment + "\n"
-            }.excludeMultiLineComment()
+        private fun generateTokenList(linesString: String): List<TokenInfo> {
+            val jackText = linesString.excludeComment()
 
             val onlyTokenLines = jackText.split(Regex("""(\r\n|\n|\r)"""))
             val list = mutableListOf<TokenInfo>()
@@ -49,47 +46,6 @@ class JackTokenizer constructor(private val fileName:String,lines: List<String>)
                     list.add(TokenInfo(tokenType, token, numberOfLines))
                     matchResult = findToken(line)
                 }
-            }
-            return list
-        }
-
-        private fun generateTokenListHoge(lines: List<String>): List<TokenInfo> {
-            var jackText = lines.fold("") { s, element ->
-                val elementWithoutComment = element.excludeSingleLineComment()
-                s + elementWithoutComment + "\n"
-            }.excludeMultiLineComment()
-
-            val list = mutableListOf<TokenInfo>()
-
-            val findToken: (jackText: String) -> MatchResult? = {
-                var result: MatchResult? = null
-                for (tokenType in Token.values()) {
-                    result = Regex("""^\s*${tokenType.pattern}""").find(jackText)
-                    if (result != null) {
-                        break
-                    }
-                }
-                result
-            }
-
-            var matchResult = findToken(jackText)
-            while (matchResult != null) {
-                var token = matchResult.value.replace(Regex("""^\s*"""), "")
-
-                val patternNewLine = """(\r\n|\n|\r)"""
-                val numberOfLines = Regex(patternNewLine)
-                        .findAll(jackText.subSequence(0, matchResult.range.last))
-                        .count()
-                val onlyNewLine = Regex(patternNewLine).findAll(matchResult.value).fold("") { init, element ->
-                    init + element.value
-                }
-                val tokenType = Token.values().first { Regex(it.pattern).matches(token) }
-                if (tokenType == Token.STRING_CONST) {
-                    token = token.replace(""""""", "")
-                }
-                list.add(TokenInfo(tokenType, token, numberOfLines))
-                jackText = jackText.replaceRange(matchResult.range, onlyNewLine)
-                matchResult = findToken(jackText)
             }
             return list
         }
@@ -213,29 +169,41 @@ fun <T> List<T>.getSafe(index: Int): T? {
     return null
 }
 
-fun String.excludeMultiLineComment(): String {
+fun String.excludeComment(): String {
 
-    val patternLine = """(\r\n|\n|\r)"""
-    var newSentence = this
-    val regexComment = Regex("""(/\*[\s\S]*?\*/)""")
-    val regexCommentPrefix = Regex("""/\*""")
+    var newString = this
+    // 「/**/」or「//」を抽出するための
+    val regexComment = Regex("""(/\*[\s\S]*?\*/)|(//.*)""")
+    val regexMultiCommentPrefix = Regex("""/\*""")
+    val regexLine = Regex("""(\r\n|\n|\r)""")
 
-    val regexNewLine = Regex(patternLine)
-
-    var result = regexComment.find(newSentence)
+    var result = regexComment.find(newString)
     while (result != null) {
-        val lastPrefix = regexCommentPrefix.findAll(result.value).last()
-        val range = IntRange(result.range.first + lastPrefix.range.first, result.range.last )
-        val temp = newSentence.substring(range)
-        val newLine = regexNewLine.findAll(temp).fold("") { init, element -> init + element.value }
-        newSentence = newSentence.replaceRange(range,newLine)
-        result = regexComment.find(newSentence)
+        var range: IntRange
+        var replace: String
+        when (result.value.startsWith("/*")) {
+            true -> {
+                val lastPrefix = regexMultiCommentPrefix
+                        .findAll(result.value)
+                        .last()
+                range = IntRange(
+                        result.range.first + lastPrefix.range.first,
+                        result.range.last
+                )
+                val temp = newString.substring(range)
+                replace = regexLine
+                        .findAll(temp)
+                        .map { it.value }
+                        .joinToString("")
+            }
+            false -> {
+                replace = regexLine.find(result.value)?.value ?: ""
+                range = result.range
+            }
+        }
+        newString = newString.replaceRange(range, replace)
+        result = regexComment.find(newString)
     }
-    return newSentence
+    return newString
 }
 
-fun String.excludeSingleLineComment(): String {
-    return this
-            .split("//")
-            .firstOrNull() ?: ""
-}

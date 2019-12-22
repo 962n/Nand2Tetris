@@ -1,5 +1,6 @@
 import org.junit.Test
 import java.io.File
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 class CompilationEngineTest {
@@ -19,11 +20,11 @@ class CompilationEngineTest {
         )
         testList.forEach { testFile ->
             val file = File(javaClass.classLoader.getResource(testFile.jackFile).file)
-            val lines = Files.readAllLines(file.toPath())
+            val linesString = Files.readString(file.toPath(), StandardCharsets.UTF_8)
             val writer = Writer4TestImpl()
             val compilationEngine = CompilationEngine(
                     file.name,
-                    JackTokenizer(file.name, lines),
+                    JackTokenizer(file.name, linesString),
                     TokenTagConverterImpl(),
                     writer
             )
