@@ -8,12 +8,11 @@ class JackAnalyzer constructor(private val jackFilePath: String) {
     fun execute() {
         val jackFile = File(jackFilePath)
         val linesString = Files.readString(jackFile.toPath(),StandardCharsets.UTF_8)
-        val writePath = jackFilePath.removeSuffix(".jack") + "Compare.xml"
+        val writePath = jackFilePath.removeSuffix(".jack") + ".vm"
         val compilationEngine = CompilationEngine(
                 jackFile.name,
                 JackTokenizer(jackFile.name ,linesString),
-                TokenTagConverterImpl(),
-                WriterImpl(writePath)
+                VMWriter(writePath)
         )
         compilationEngine.compileClass()
     }

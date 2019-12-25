@@ -22,29 +22,19 @@ class JackTokenizer constructor(private val fileName:String,linesString: String)
             val onlyTokenLines = jackText.split(Regex("""(\r\n|\n|\r)"""))
             val list = mutableListOf<TokenInfo>()
 
-            val findToken: (textLine: String) -> MatchResult? = { textLine ->
-                var result: MatchResult? = null
-                for (tokenType in Token.values()) {
-                    result = Regex("""^\s*${tokenType.pattern}""").find(textLine)
-                    if (result != null) {
-                        break
-                    }
-                }
-                result
-            }
             onlyTokenLines.forEachIndexed { index, s ->
                 var line = s
-                var matchResult = findToken(line)
+                var matchResult = Token.findToken(line)
                 while (matchResult != null) {
                     var token = matchResult.value.replace(Regex("""^\s*"""), "")
                     val numberOfLines = index + 1
-                    val tokenType = Token.values().first { Regex(it.pattern).matches(token) }
+                    val tokenType = Token.of(token) ?: throw Exception("unknown token type!!")
                     if (tokenType == Token.STRING_CONST) {
                         token = token.replace(""""""", "")
                     }
                     line = line.replaceRange(matchResult.range, "")
                     list.add(TokenInfo(tokenType, token, numberOfLines))
-                    matchResult = findToken(line)
+                    matchResult = Token.findToken(line)
                 }
             }
             return list

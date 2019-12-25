@@ -28,7 +28,7 @@ enum class Token {
     INT_CONST {
         override val pattern: String
             get() {
-                return """([1-9]+[0-9]|[0-9])"""
+                return """([1-9][0-9]+|[0-9])"""
             }
     },
     STRING_CONST {
@@ -37,5 +37,38 @@ enum class Token {
             get() = """"[\x{0}-\x{10FFFF}]*?""""
     };
 
+    companion object {
+        fun findToken(s: String): MatchResult? {
+            val tokenTypes = listOf(SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST)
+            var result: MatchResult? = null
+            for (tokenType in tokenTypes) {
+                result = Regex("""^\s*${tokenType.pattern}""").find(s)
+                if (result != null) {
+                    break
+                }
+            }
+            return result
+        }
+
+        fun of(token: String): Token? {
+            val tokenTypes = listOf(SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST)
+            var result: Token? = null
+            for (tokenType in tokenTypes) {
+                if (Regex(tokenType.pattern).matches(token)) {
+                    result = tokenType
+                    break
+                }
+            }
+            if (result != IDENTIFIER) {
+                return result
+            }
+            if (Regex(KEYWORD.pattern).matches(token)) {
+                return KEYWORD
+            }
+            return result
+        }
+    }
+
     abstract val pattern: String
+
 }

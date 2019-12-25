@@ -1,15 +1,14 @@
-import constant.Keyword
-import constant.Token
+import constant.*
 import java.lang.Exception
 
 class CompilationEngine
 constructor(
-        private val fileName:String,
+        private val fileName: String,
         private val tokenizer: JackTokenizer,
-        private val tokenConverter: TokenConverter,
-        private val writer: Writer
+        private val writer: VMWriter
 ) {
     private val syntaxFailure get() = Exception("$fileName line ${tokenizer.currentNumberOfLines} is syntax error. word = '${tokenizer.token}'")
+    lateinit var symbolTable: SymbolTable
 
     /**
      * ’class’ className ’{’ classVarDec* subroutineDec* ’}’
@@ -18,29 +17,26 @@ constructor(
         if (!tokenizer.hasMoreToken) {
             return
         }
-        writer.addSentence("<class>")
-        writer.incrementIndent()
+
 
         // 'class'
         tokenizer.advance()
         if (!tokenizer.isKeyword(Keyword.CLASS)) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         // className
         tokenizer.advance()
         if (!tokenizer.isIdentifier()) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        symbolTable = SymbolTable(tokenizer.token)
 
         // ’{’
         tokenizer.advance()
         if (!tokenizer.isSymbol("{")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         // classVarDec*
         tokenizer.advance()
@@ -59,15 +55,13 @@ constructor(
         if (!tokenizer.isSymbol("}")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+
 
         if (tokenizer.hasMoreToken) {
             throw syntaxFailure
         }
 
-        writer.decrementIndent()
-        writer.addSentence("</class>")
-        writer.commit()
+        writer.close()
     }
 
     /**
@@ -77,10 +71,9 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.STATIC, Keyword.FIELD)) {
             throw syntaxFailure
         }
-        writer.addSentence("<classVarDec>")
-        writer.incrementIndent()
+        val kind = Kind.of(tokenizer.keyword) ?: throw syntaxFailure
+
         // (’static’ | ’field’)
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         // type
         tokenizer.advance()
@@ -88,24 +81,28 @@ constructor(
         if (!tokenizer.isType) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        val type = tokenizer.token
+
 
         // varName
         tokenizer.advance()
         if (!tokenizer.isIdentifier()) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        var name = tokenizer.token
+        symbolTable.define(name, type, kind)
 
         //(’,’ varName)*
         tokenizer.advance()
         while (tokenizer.isSymbol(",")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+
             tokenizer.advance()
-            if (tokenizer.tokenType != Token.IDENTIFIER) {
+            if (!tokenizer.isIdentifier()) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            name = tokenizer.token
+            symbolTable.define(name, type, kind)
+
             tokenizer.advance()
         }
 
@@ -113,10 +110,7 @@ constructor(
         if (!tokenizer.isSymbol(";")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
-        writer.decrementIndent()
-        writer.addSentence("</classVarDec>")
     }
 
     /**
@@ -129,32 +123,34 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.CONSTRUCTOR, Keyword.FUNCTION, Keyword.METHOD)) {
             throw syntaxFailure
         }
-        writer.addSentence("<subroutineDec>")
-        writer.incrementIndent()
+        val keyword = tokenizer.keyword
 
         // (’constructor’ | ’function’ | ’method’)
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         //(’void’ | type)
         tokenizer.advance()
         if (!(tokenizer.isType || tokenizer.isKeyword(Keyword.VOID))) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+
 
         // subroutineName
         tokenizer.advance()
         if (!tokenizer.isIdentifier()) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        val subroutineName = tokenizer.identifier
+        symbolTable.startSubroutine(subroutineName)
+        if (keyword == Keyword.METHOD) {
+            symbolTable.define(Keyword.THIS.value, symbolTable.className, Kind.ARG)
+        }
 
         // ’(’
         tokenizer.advance()
         if (!tokenizer.isSymbol("(")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+
 
         tokenizer.advance()
         compileParameterList()
@@ -164,23 +160,34 @@ constructor(
         if (!tokenizer.isSymbol(")")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
-        writer.addSentence("<subroutineBody>")
-        writer.incrementIndent()
 
         tokenizer.advance()
-        // ’)’
+        // ’{’
         if (!tokenizer.isSymbol("{")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+
 
         //vardec
         tokenizer.advance()
         while (tokenizer.isKeyword(Keyword.VAR)) {
             compileVarDec()
             tokenizer.advance()
+        }
+        writer.writeFunction("${symbolTable.className}.${subroutineName}", symbolTable.varCount(Kind.VAR))
+        when (keyword) {
+            Keyword.CONSTRUCTOR -> {
+                writer.writePush(Segment.CONST, symbolTable.varCount(Kind.FIELD))
+                writer.writeCall("Memory.alloc", 1)
+                writer.writePop(Segment.POINTER, 0)
+            }
+            Keyword.METHOD -> {
+                writer.writePush(Segment.ARG, 0)
+                writer.writePop(Segment.POINTER, 0)
+            }
+            else -> {
+            }
         }
         // statements
         compileStatements()
@@ -190,12 +197,7 @@ constructor(
         if (!tokenizer.isSymbol("}")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
-        writer.decrementIndent()
-        writer.addSentence("</subroutineBody>")
 
-        writer.decrementIndent()
-        writer.addSentence("</subroutineDec>")
 
     }
 
@@ -203,44 +205,40 @@ constructor(
      * ((type varName) (’,’ type varName)*)?
      */
     fun compileParameterList() {
-        writer.addSentence("<parameterList>")
-        writer.incrementIndent()
+
         if (!tokenizer.isType) {
             tokenizer.rollBack()
-            writer.decrementIndent()
-            writer.addSentence("</parameterList>")
             return
         }
+        var type = tokenizer.token
 
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         if (tokenizer.tokenType != Token.IDENTIFIER) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        var name = tokenizer.token
+        symbolTable.define(name, type, Kind.ARG)
+
 
         tokenizer.advance()
         while (tokenizer.isSymbol(",")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
 
             tokenizer.advance()
             if (!tokenizer.isType) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            type = tokenizer.token
 
             tokenizer.advance()
             if (!tokenizer.isIdentifier()) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            name = tokenizer.token
+            symbolTable.define(name, type, Kind.ARG)
             tokenizer.advance()
         }
         tokenizer.rollBack()
-        writer.decrementIndent()
-        writer.addSentence("</parameterList>")
-
     }
 
     /**
@@ -250,53 +248,40 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.VAR)) {
             throw syntaxFailure
         }
-        writer.addSentence("<varDec>")
-        writer.incrementIndent()
-
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         if (!tokenizer.isType) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
-
-        /**
-         /** */
-         /**/
-         */
+        val type = tokenizer.token
 
         tokenizer.advance()
         if (!tokenizer.isIdentifier()) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        var name = tokenizer.token
+        symbolTable.define(name, type, Kind.VAR)
 
         tokenizer.advance()
         while (tokenizer.isSymbol(",")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
             tokenizer.advance()
             if (!tokenizer.isIdentifier()) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            name = tokenizer.token
+            symbolTable.define(name, type, Kind.VAR)
             tokenizer.advance()
         }
         if (!tokenizer.isSymbol(";")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
-        writer.decrementIndent()
-        writer.addSentence("</varDec>")
     }
 
     /**
      * (letStatement | ifStatement | whileStatement | doStatement | returnStatement)*
      */
     fun compileStatements() {
-        writer.addSentence("<statements>")
-        writer.incrementIndent()
         while (tokenizer.isKeyword(Keyword.LET, Keyword.IF, Keyword.WHILE, Keyword.DO, Keyword.RETURN)) {
             when (tokenizer.keyword) {
                 Keyword.LET -> compileLet()
@@ -311,8 +296,6 @@ constructor(
             tokenizer.advance()
         }
         tokenizer.rollBack()
-        writer.decrementIndent()
-        writer.addSentence("</statements>")
     }
 
     /**
@@ -322,9 +305,6 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.DO)) {
             throw syntaxFailure
         }
-        writer.addSentence("<doStatement>")
-        writer.incrementIndent()
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileSubroutineCall()
@@ -333,48 +313,45 @@ constructor(
         if (!tokenizer.isSymbol(";")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
-
-
-        writer.decrementIndent()
-        writer.addSentence("</doStatement>")
+        writer.writePop(Segment.TEMP, 0)
     }
 
     /**
      * ’let’ varName (’[’ expression ’]’)? ’=’ expression ’;’
      */
     fun compileLet() {
-//        let game = game;
+
         if (!tokenizer.isKeyword(Keyword.LET)) {
             throw syntaxFailure
         }
-        writer.addSentence("<letStatement>")
-        writer.incrementIndent()
-        writer.addSentence(tokenConverter.convert(tokenizer))
+
 
         tokenizer.advance()
         if (!tokenizer.isIdentifier()) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        val name = tokenizer.token
+
 
         tokenizer.advance()
+        var isList = false
         if (tokenizer.isSymbol("[")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            isList = true
             tokenizer.advance()
             compileExpression()
             tokenizer.advance()
             if (!tokenizer.isSymbol("]")) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
             tokenizer.advance()
+            writer.writePush(convertSegment(symbolTable.kindOf(name)), symbolTable.indexOf(name))
+            writer.writeArithmetic(Command.ADD)
+            writer.writePop(Segment.TEMP, 1)
         }
 
         if (!tokenizer.isSymbol("=")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileExpression()
@@ -383,10 +360,25 @@ constructor(
         if (!tokenizer.isSymbol(";")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        if (isList) {
+            writer.writePush(Segment.TEMP, 1)
+            writer.writePop(Segment.POINTER, 1)
+            writer.writePop(Segment.THAT, 0)
+        } else {
+            val index = symbolTable.indexOf(name)
+            val segment = convertSegment(symbolTable.kindOf(name))
+            writer.writePop(segment, index)
+        }
+    }
 
-        writer.decrementIndent()
-        writer.addSentence("</letStatement>")
+    private fun convertSegment(kind: Kind): Segment {
+        return when (kind) {
+            Kind.STATIC -> Segment.STATIC
+            Kind.FIELD -> Segment.THIS
+            Kind.ARG -> Segment.ARG
+            Kind.VAR -> Segment.LOCAL
+            else -> throw syntaxFailure
+        }
     }
 
     /**
@@ -396,15 +388,14 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.WHILE)) {
             throw syntaxFailure
         }
-        writer.addSentence("<whileStatement>")
-        writer.incrementIndent()
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        val label1 = symbolTable.generateLabel()
+        val label2 = symbolTable.generateLabel()
+        writer.writeLabel(label1)
 
         tokenizer.advance()
         if (!tokenizer.isSymbol("(")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileExpression()
@@ -413,13 +404,13 @@ constructor(
         if (!tokenizer.isSymbol(")")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        writer.writeArithmetic(Command.NOT)
+        writer.writeIf(label2)
 
         tokenizer.advance()
         if (!tokenizer.isSymbol("{")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileStatements()
@@ -428,10 +419,9 @@ constructor(
         if (!tokenizer.isSymbol("}")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        writer.writeGoto(label1)
+        writer.writeLabel(label2)
 
-        writer.decrementIndent()
-        writer.addSentence("</whileStatement>")
     }
 
     /**
@@ -441,24 +431,18 @@ constructor(
         if (!tokenizer.isKeyword(Keyword.RETURN)) {
             throw syntaxFailure
         }
-        writer.addSentence("<returnStatement>")
-        writer.incrementIndent()
-        writer.addSentence(tokenConverter.convert(tokenizer))
-        val finally = {
-            writer.decrementIndent()
-            writer.addSentence("</returnStatement>")
-        }
-
         tokenizer.advance()
-        if (!tokenizer.isSymbol(";")) {
-            compileExpression()
-            tokenizer.advance()
+        if (tokenizer.isSymbol(";")) {
+            writer.writePush(Segment.CONST, 0)
+            writer.writeReturn()
+            return
         }
+        compileExpression()
+        tokenizer.advance()
         if (!tokenizer.isSymbol(";")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
-        finally()
+        writer.writeReturn()
     }
 
     /**
@@ -467,20 +451,16 @@ constructor(
      * ’}’)?
      */
     fun compileIf() {
-        writer.addSentence("<ifStatement>")
-        writer.incrementIndent()
 
         // if
         if (!tokenizer.isKeyword(Keyword.IF)) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         if (!tokenizer.isSymbol("(")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileExpression()
@@ -489,13 +469,15 @@ constructor(
         if (!tokenizer.isSymbol(")")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        writer.writeArithmetic(Command.NOT)
+        val label1 = symbolTable.generateLabel()
+        val label2 = symbolTable.generateLabel()
+        writer.writeIf(label1)
 
         tokenizer.advance()
         if (!tokenizer.isSymbol("{")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileStatements()
@@ -505,22 +487,20 @@ constructor(
         if (!tokenizer.isSymbol("}")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        writer.writeGoto(label2)
+        writer.writeLabel(label1)
 
         tokenizer.advance()
         if (!tokenizer.isKeyword(Keyword.ELSE)) {
             tokenizer.rollBack()
-            writer.decrementIndent()
-            writer.addSentence("</ifStatement>")
+            writer.writeLabel(label2)
             return
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         if (!tokenizer.isSymbol("{")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         compileStatements()
@@ -529,29 +509,33 @@ constructor(
         if (!tokenizer.isSymbol("}")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
-
-        writer.decrementIndent()
-        writer.addSentence("</ifStatement>")
+        writer.writeLabel(label2)
     }
 
     /**
      * term (op term)*
      */
     fun compileExpression() {
-        writer.addSentence("<expression>")
-        writer.incrementIndent()
         compileTerm()
         tokenizer.advance()
         while (tokenizer.isSymbol("+", "-", "*", "/", "&", "|", "<", ">", "=")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            val op = tokenizer.token
             tokenizer.advance()
             compileTerm()
             tokenizer.advance()
+            when (op) {
+                "+" -> writer.writeArithmetic(Command.ADD)
+                "-" -> writer.writeArithmetic(Command.SUB)
+                "*" -> writer.writeCall("Math.multiply", 2)
+                "/" -> writer.writeCall("Math.divide", 2)
+                "&" -> writer.writeArithmetic(Command.AND)
+                "|" -> writer.writeArithmetic(Command.OR)
+                ">" -> writer.writeArithmetic(Command.GT)
+                "<" -> writer.writeArithmetic(Command.LT)
+                "=" -> writer.writeArithmetic(Command.EQ)
+            }
         }
         tokenizer.rollBack()
-        writer.decrementIndent()
-        writer.addSentence("</expression>")
     }
 
     /**
@@ -560,42 +544,36 @@ constructor(
      * ’(’ expression ’)’ | unaryOp term
      */
     fun compileTerm() {
-        writer.addSentence("<term>")
-        writer.incrementIndent()
-        val finally = {
-            writer.decrementIndent()
-            writer.addSentence("</term>")
-        }
 
         // integerConstant | stringConstant | keywordConstant |
         if (tokenizer.isIntConst()
                 || tokenizer.isStringConst()
                 || tokenizer.isKeyword(Keyword.TRUE, Keyword.FALSE, Keyword.NULL, Keyword.THIS)
         ) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            finally()
+            writeConst()
             return
         }
 
         // unaryOp term
         if (tokenizer.isSymbol("-", "~")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            val command = when (tokenizer.token) {
+                "-" -> Command.NEG
+                else -> Command.NOT
+            }
             tokenizer.advance()
             compileTerm()
-            finally()
+            writer.writeArithmetic(command)
             return
         }
+
         // ’(’ expression ’)’
         if (tokenizer.isSymbol("(")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
             tokenizer.advance()
             compileExpression()
             tokenizer.advance()
             if (!tokenizer.isSymbol(")")) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            finally()
             return
         }
         // varName | varName ’[’ expression ’]’ | subroutineCall
@@ -606,27 +584,67 @@ constructor(
         if (tokenizer.isSymbol("(", ".")) {
             tokenizer.rollBack()
             compileSubroutineCall()
-            finally()
             return
         }
         tokenizer.rollBack()
-        writer.addSentence(tokenConverter.convert(tokenizer))
 
         tokenizer.advance()
         if (tokenizer.isSymbol("[")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            tokenizer.rollBack()
+            val name = tokenizer.token
+            writer.writePush(convertSegment(symbolTable.kindOf(name)), symbolTable.indexOf(name))
+            tokenizer.advance()
             tokenizer.advance()
             compileExpression()
             tokenizer.advance()
             if (!tokenizer.isSymbol("]")) {
                 throw syntaxFailure
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            writer.writeArithmetic(Command.ADD)
+            writer.writePop(Segment.POINTER, 1)
+            writer.writePush(Segment.THAT, 0)
         } else {
             tokenizer.rollBack()
+            val name = tokenizer.token
+            val index = symbolTable.indexOf(name)
+            val segment = convertSegment(symbolTable.kindOf(name))
+            writer.writePush(segment, index)
         }
-        finally()
+    }
 
+    private fun writeConst() {
+        tokenizer.isIntConst()
+                || tokenizer.isStringConst()
+                || tokenizer.isKeyword(Keyword.TRUE, Keyword.FALSE, Keyword.NULL, Keyword.THIS)
+        if (tokenizer.isIntConst()) {
+            writer.writePush(Segment.CONST, tokenizer.intVal)
+            return
+        }
+        if (tokenizer.isStringConst()) {
+            val string = tokenizer.stringVal
+            writer.writePush(Segment.CONST, string.length)
+            writer.writeCall("String.new", 1)
+            string.forEach { c ->
+                writer.writePush(Segment.CONST, c.toInt())
+                writer.writeCall("String.appendChar", 2)
+            }
+            return
+        }
+        when (tokenizer.keyword) {
+            Keyword.TRUE -> {
+                writer.writePush(Segment.CONST, 1)
+                writer.writeArithmetic(Command.NEG)
+            }
+            Keyword.FALSE, Keyword.NULL -> {
+                writer.writePush(Segment.CONST, 0)
+            }
+            Keyword.THIS -> {
+                writer.writePush(Segment.POINTER, 0)
+            }
+            else -> {
+                throw syntaxFailure
+            }
+        }
     }
 
     /**
@@ -639,71 +657,87 @@ constructor(
             throw syntaxFailure
         }
 
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        val firstToken = tokenizer.token
         tokenizer.advance()
 
-        if (tokenizer.isSymbol("(")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            tokenizer.advance()
-            compileExpressionList()
-            tokenizer.advance()
-            if (!tokenizer.isSymbol(")")) {
-                throw syntaxFailure
+        val functionName: String
+        val isMethod: Boolean
+        var innerCallMethod = false
+        when (tokenizer.isSymbol(".")) {
+            true -> {
+                tokenizer.advance()
+                if (!tokenizer.isIdentifier()) {
+                    throw syntaxFailure
+                }
+                val prefix: String
+                when (symbolTable.kindOf(firstToken)) {
+                    Kind.NONE -> {
+                        prefix = firstToken
+                        isMethod = false
+                    }
+                    else -> {
+                        prefix = symbolTable.typeOf(firstToken)
+                        isMethod = true
+                        innerCallMethod = false
+                    }
+                }
+                functionName = "$prefix.${tokenizer.token}"
+                tokenizer.advance()
             }
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            return
+            false -> {
+                functionName = "${symbolTable.className}.$firstToken"
+                isMethod = true
+                innerCallMethod = true
+            }
         }
-
-        if (!tokenizer.isSymbol(".")) {
+        if (!tokenizer.isSymbol("(")) {
             throw syntaxFailure
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
         tokenizer.advance()
-        if (!tokenizer.isIdentifier()) {
-            throw syntaxFailure
+
+        if (isMethod) {
+            when (innerCallMethod) {
+                true -> writer.writePush(Segment.POINTER, 0)
+                false -> writer.writePush(convertSegment(symbolTable.kindOf(firstToken)), symbolTable.indexOf(firstToken))
+            }
+
         }
-        writer.addSentence(tokenConverter.convert(tokenizer))
+        var argsSize = compileExpressionList()
+        if (isMethod) {
+            argsSize++
+        }
 
         tokenizer.advance()
-        if (tokenizer.isSymbol("(")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            tokenizer.advance()
-            compileExpressionList()
-            tokenizer.advance()
-            if (!tokenizer.isSymbol(")")) {
-                throw syntaxFailure
-            }
-            writer.addSentence(tokenConverter.convert(tokenizer))
-            return
+        if (!tokenizer.isSymbol(")")) {
+            throw syntaxFailure
         }
-        throw syntaxFailure
+        writer.writeCall(functionName, argsSize)
+
+
     }
 
 
     /**
      * (expression (’,’ expression)* )?
+     * @return argument count
      */
-    fun compileExpressionList() {
-        writer.addSentence("<expressionList>")
-        writer.incrementIndent()
+    fun compileExpressionList(): Int {
+        var argsSize = 0
         if (tokenizer.isSymbol(")")) {
             tokenizer.rollBack()
-            writer.decrementIndent()
-            writer.addSentence("</expressionList>")
-            return
+            return argsSize
         }
 
+        argsSize++
         compileExpression()
         tokenizer.advance()
         while (tokenizer.isSymbol(",")) {
-            writer.addSentence(tokenConverter.convert(tokenizer))
+            argsSize++
             tokenizer.advance()
             compileExpression()
             tokenizer.advance()
         }
         tokenizer.rollBack()
-        writer.decrementIndent()
-        writer.addSentence("</expressionList>")
-
+        return argsSize
     }
 }

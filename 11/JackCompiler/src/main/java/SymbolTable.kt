@@ -1,9 +1,11 @@
 import constant.Kind
 import java.lang.Exception
 
-class SymbolTable {
+class SymbolTable(val className: String) {
 
     private val classMap = mutableMapOf<String, SymbolInfo>()
+    private var subroutineName: String = ""
+    private var returnIndex: Int = -1
     private val subroutineMap = mutableMapOf<String, SymbolInfo>()
 
     private data class SymbolInfo(val type: String, val kind: Kind, val index: Int)
@@ -24,8 +26,18 @@ class SymbolTable {
         return subroutineMap[name] ?: classMap[name]
     }
 
-    fun startSubroutine() {
+    fun startSubroutine(subroutineName: String) {
+        this.subroutineName = subroutineName
+        returnIndex = -1
         subroutineMap.clear()
+    }
+
+    fun generateLabel(): String {
+        returnIndex++
+        return when (subroutineName.isEmpty()) {
+            true -> "$className.label.$returnIndex"
+            false -> "$className.$subroutineName.label.$returnIndex"
+        }
     }
 
     fun define(name: String, type: String, kind: Kind) {

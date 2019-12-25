@@ -64,6 +64,40 @@ class JackTokenizerTest {
             assert(actual == expects[index])
         }
     }
+    @Test
+    fun integerTest() {
+        val classFile = """
+            |8000,90,10000
+        """.trimMargin()
+        val expected = listOf(
+                INT_CONST to "8000", SYMBOL to ",",
+                INT_CONST to "90", SYMBOL to ",",
+                INT_CONST to "10000"
+        )
+
+        val tokenizer = JackTokenizer("",classFile)
+        val actualList = mutableListOf<Pair<Token,String>>()
+        while (tokenizer.hasMoreToken) {
+            tokenizer.advance()
+            val tokenType = tokenizer.tokenType
+            val string = when (tokenType) {
+                KEYWORD -> tokenizer.keyword.value
+                SYMBOL -> tokenizer.symbol
+                STRING_CONST -> tokenizer.stringVal
+                INT_CONST -> tokenizer.intVal.toString()
+                IDENTIFIER -> tokenizer.identifier
+            }
+            actualList.add(tokenType to string)
+        }
+        expected.forEachIndexed { index ,pair ->
+            val actual = actualList[index]
+//            println("expect.first = ${pair.first} | actual.first = ${actual.first}")
+//            println("expect.second = ${pair.second} | actual.second = ${actual.second}")
+            assert(pair.first == actual.first)
+            assert(pair.second == actual.second)
+        }
+
+    }
 
     @Test
     fun tokenizerTest() {

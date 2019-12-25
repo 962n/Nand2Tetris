@@ -6,4 +6,15 @@ enum class Kind {
     FIELD,
     ARG,
     VAR;
+
+    companion object {
+        fun of(keyword: Keyword): Kind? {
+            return when (keyword) {
+                Keyword.STATIC -> STATIC
+                Keyword.FIELD -> FIELD
+                Keyword.VAR -> VAR
+                else -> null
+            }
+        }
+    }
 }

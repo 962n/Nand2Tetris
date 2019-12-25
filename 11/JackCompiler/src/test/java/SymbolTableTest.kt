@@ -20,7 +20,7 @@ class SymbolTableTest {
                 DefineResult("fugaArg", "boolean", Kind.ARG, 1)
         )
 
-        val symbolTable = SymbolTable()
+        val symbolTable = SymbolTable("HogeClass")
         expectList.forEach { expect ->
             symbolTable.define(expect.name, expect.type, expect.kind)
         }
@@ -46,7 +46,7 @@ class SymbolTableTest {
         val subroutineResult2 = DefineResult(duplicateName, "boolean", Kind.ARG, 1)
         val list = listOf(classResult, subroutineResult1, subroutineResult2)
 
-        val symbolTable = SymbolTable()
+        val symbolTable = SymbolTable("HogeClass")
         list.forEach { expect ->
             symbolTable.define(expect.name, expect.type, expect.kind)
         }
@@ -57,13 +57,13 @@ class SymbolTableTest {
 
     @Test
     fun startSubroutine() {
-        val symbolTable = SymbolTable()
+        val symbolTable = SymbolTable("HogeClass")
         val name = "hoge"
         val type = "int"
         symbolTable.define(name, type, Kind.VAR)
         Assert.assertTrue(symbolTable.indexOf(name) == 0)
 
-        symbolTable.startSubroutine()
+        symbolTable.startSubroutine("subroutine")
         val exceptionFunctions = listOf<(String) -> Unit>(
                 { s -> symbolTable.indexOf(s) },
                 { s -> symbolTable.typeOf(s) }

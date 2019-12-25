@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
-class VMWriter(
+open class VMWriter(
         private val writePath: String
 ) {
 
@@ -53,7 +53,7 @@ class VMWriter(
         addLine("return")
     }
 
-    fun close() {
+    open fun close() {
         val file = File(writePath)
         if (file.exists()) {
             file.delete()
@@ -64,5 +64,11 @@ class VMWriter(
                 StandardCharsets.UTF_8,
                 StandardOpenOption.WRITE, StandardOpenOption.CREATE
         )
+    }
+}
+class VMWriter4Test constructor(writePath:String) : VMWriter(writePath) {
+
+    override fun close() {
+        // do nothing
     }
 }
